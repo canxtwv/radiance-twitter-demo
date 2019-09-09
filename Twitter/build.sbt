@@ -36,6 +36,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-persistence-cassandra" % "0.91",
   "com.typesafe.akka" %% "akka-http"   % "10.1.8",
 
+  "com.danielasfregola" %% "twitter4s" % "6.1",
+
   "org.scalatest" %% "scalatest" % "3.0.4" % Test,
   "io.surfkit" %% "typebus-testkit" % typebusV % Test
 )

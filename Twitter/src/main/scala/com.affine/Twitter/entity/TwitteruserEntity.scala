@@ -18,11 +18,11 @@ object TwitteruserEntity {
 
   sealed trait Command
   // command
-  final case class EntityCreateTwitteruser(id: UUID, create: CreateTwitteruser)(val replyTo: ActorRef[TwitteruserCreated]) extends Command
-  final case class EntityModifyState(state: TwitteruserState)(val replyTo: ActorRef[TwitteruserCompensatingActionPerformed]) extends Command
+  final case class EntityAddTweets(id: String, add: AddTweets)(val replyTo: ActorRef[TweetsAdded]) extends Command
+
   // query
-  final case class EntityGetTwitteruser(get: GetTwitteruser)(val replyTo: ActorRef[Twitteruser]) extends Command
-  final case class EntityGetState(id: UUID)(val replyTo: ActorRef[TwitteruserState]) extends Command
+  final case class EntityGetTwitteruserCommand(id: String)(val replyTo: ActorRef[Twitteruser]) extends Command
+  final case class EntityGetState(id: String)(val replyTo: ActorRef[TwitteruserState]) extends Command
 
   val entityTypeKey: EntityTypeKey[Command] =
     EntityTypeKey[Command]("TwitteruserEntity")
@@ -30,29 +30,24 @@ object TwitteruserEntity {
   def behavior(entityId: String): Behavior[Command] =
     EventSourcedBehavior[Command, TwitteruserEvent, TwitteruserState](
     persistenceId = PersistenceId(entityId),
-    emptyState =  TwitteruserState(None),
+    emptyState =  TwitteruserState(tweets = Map.empty[String, Tweet]),
     commandHandler,
     eventHandler)
 
   private val commandHandler: (TwitteruserState, Command) => Effect[TwitteruserEvent, TwitteruserState] = { (state, command) =>
     command match {
-      case x: EntityCreateTwitteruser =>
+      case x: EntityAddTweets =>
         val id = x.id
-        val entity = Twitteruser(id, x.create.data)
-        val created = TwitteruserCreated(entity)
+        val created = TweetsAdded(id, x.add.tweets)
         Effect.persist(created).thenRun(_ => x.replyTo.tell(created))
 
-      case x: EntityGetTwitteruser =>
-        state.entity.map(x.replyTo.tell)
+      case x: EntityGetTwitteruserCommand =>
+        x.replyTo.tell(Twitteruser(x.id, state.tweets.values.toSeq) )
         Effect.none
 
       case x: EntityGetState =>
         x.replyTo.tell(state)
         Effect.none
-
-      case x: EntityModifyState =>
-        val compensatingActionPerformed = TwitteruserCompensatingActionPerformed(x.state)
-        Effect.persist(compensatingActionPerformed).thenRun(_ => x.replyTo.tell(compensatingActionPerformed))
 
       case _ => Effect.unhandled
     }
@@ -62,10 +57,8 @@ object TwitteruserEntity {
     state match {
       case state: TwitteruserState =>
         event match {
-        case TwitteruserCreated(module) =>
-          TwitteruserState(Some(module))
-        case TwitteruserCompensatingActionPerformed(newState) =>
-          newState
+        case TweetsAdded(_, x) =>
+          TwitteruserState(tweets = state.tweets ++ x.map(y => y.id -> y).toMap)
         case _ => throw new IllegalStateException(s"unexpected event [$event] in state [$state]")
       }
       case _ => throw new IllegalStateException(s"unexpected event [$event] in state [$state]")
@@ -92,17 +85,17 @@ class TwitteruserEntityDatabase(system: ActorSystem[_], val producer: Publisher)
   def entity(id: String) =
     sharding.entityRefFor(TwitteruserEntity.entityTypeKey, id)
 
-  override def createTwitteruser(x: CreateTwitteruser): Future[TwitteruserCreated] = {
-    val id = UUID.randomUUID()
-    entity(id.toString) ? TwitteruserEntity.EntityCreateTwitteruser(id, x)
+  override def addTweets(x: AddTweets): Future[TweetsAdded] = {
+    val id = x.user
+    entity(id.toString) ? TwitteruserEntity.EntityAddTweets(id, x)
   }
 
-  override def getTwitteruser(x: GetTwitteruser): Future[Twitteruser] =
-    entity(x.id.toString) ? TwitteruserEntity.EntityGetTwitteruser(x)
+  override def getTwitteruser(x: GetTwitteruserCommand): Future[Twitteruser] =
+    entity(x.user) ? TwitteruserEntity.EntityGetTwitteruserCommand(x.user)
 
   override def getState(id: String): Future[TwitteruserState] =
-    entity(id) ? TwitteruserEntity.EntityGetState(UUID.fromString(id))
+    entity(id) ? TwitteruserEntity.EntityGetState(id)
 
   override def modifyState(id: String, state: TwitteruserState): Future[TwitteruserState] =
-    (entity(id) ? TwitteruserEntity.EntityModifyState(state)).map(_.state)
+    Future.successful(state)
 }
