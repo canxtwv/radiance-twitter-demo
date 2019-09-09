@@ -1,0 +1,51 @@
+{
+  "symbol" : {
+    "Symbol" : "CaseClass"
+  },
+  "type" : "com.affine.Content.data.ContentState",
+  "members" : {
+    "com.affine.Content.data.ContentState.entity" : {
+      "term" : {
+        "contains" : {
+          "symbol" : {
+            "Symbol" : "CaseClass"
+          },
+          "members" : {
+            "com.affine.Content.data.Content.id" : {
+              "term" : {
+                "_type" : "io.surfkit.typebus.Typebus.Leaf",
+                "type" : "java.util.UUID"
+              },
+              "pos" : 0,
+              "hasDefault" : false
+            },
+            "com.affine.Content.data.Content.data" : {
+              "term" : {
+                "_type" : "io.surfkit.typebus.Typebus.Leaf",
+                "type" : "java.lang.String"
+              },
+              "pos" : 1,
+              "hasDefault" : false
+            }
+          },
+          "_type" : "io.surfkit.typebus.Typebus.Node",
+          "baseClasses" : [ ],
+          "type" : "com.affine.Content.data.Content"
+        },
+        "_type" : "io.surfkit.typebus.Typebus.MonoContainer",
+        "type" : "scala.Option"
+      },
+      "pos" : 0,
+      "hasDefault" : false
+    },
+    "com.affine.Content.data.ContentState.timeStamp" : {
+      "term" : {
+        "_type" : "io.surfkit.typebus.Typebus.Leaf",
+        "type" : "java.lang.String"
+      },
+      "pos" : 1,
+      "hasDefault" : false
+    }
+  },
+  "baseClasses" : [ ]
+}

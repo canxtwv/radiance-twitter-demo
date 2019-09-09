@@ -18,10 +18,9 @@ object ContentEntity {
 
   sealed trait Command
   // command
-  final case class EntityCreateContent(id: UUID, create: CreateContent)(val replyTo: ActorRef[ContentCreated]) extends Command
-  final case class EntityModifyState(state: ContentState)(val replyTo: ActorRef[ContentCompensatingActionPerformed]) extends Command
+  final case class EntityCreateContent(id: UUID, create: CreateContentCommand)(val replyTo: ActorRef[ContentCreated]) extends Command
   // query
-  final case class EntityGetContent(get: GetContent)(val replyTo: ActorRef[Content]) extends Command
+  final case class EntityGetContent(get: GetContentCommand)(val replyTo: ActorRef[Content]) extends Command
   final case class EntityGetState(id: UUID)(val replyTo: ActorRef[ContentState]) extends Command
 
   val entityTypeKey: EntityTypeKey[Command] =
@@ -30,7 +29,7 @@ object ContentEntity {
   def behavior(entityId: String): Behavior[Command] =
     EventSourcedBehavior[Command, ContentEvent, ContentState](
     persistenceId = PersistenceId(entityId),
-    emptyState =  ContentState(None),
+    emptyState =  ContentState(None, LocalDateTime.now().toString),
     commandHandler,
     eventHandler)
 
@@ -38,7 +37,7 @@ object ContentEntity {
     command match {
       case x: EntityCreateContent =>
         val id = x.id
-        val entity = Content(id, x.create.data)
+        val entity = Content(id, x.create.entity.data)
         val created = ContentCreated(entity)
         Effect.persist(created).thenRun(_ => x.replyTo.tell(created))
 
@@ -50,10 +49,6 @@ object ContentEntity {
         x.replyTo.tell(state)
         Effect.none
 
-      case x: EntityModifyState =>
-        val compensatingActionPerformed = ContentCompensatingActionPerformed(x.state)
-        Effect.persist(compensatingActionPerformed).thenRun(_ => x.replyTo.tell(compensatingActionPerformed))
-
       case _ => Effect.unhandled
     }
   }
@@ -62,10 +57,8 @@ object ContentEntity {
     state match {
       case state: ContentState =>
         event match {
-        case ContentCreated(module) =>
-          ContentState(Some(module))
-        case ContentCompensatingActionPerformed(newState) =>
-          newState
+        case ContentCreated(x) =>
+          ContentState(Some(x), LocalDateTime.now().toString)
         case _ => throw new IllegalStateException(s"unexpected event [$event] in state [$state]")
       }
       case _ => throw new IllegalStateException(s"unexpected event [$event] in state [$state]")
@@ -92,17 +85,17 @@ class ContentEntityDatabase(system: ActorSystem[_], val producer: Publisher)(imp
   def entity(id: String) =
     sharding.entityRefFor(ContentEntity.entityTypeKey, id)
 
-  override def createContent(x: CreateContent): Future[ContentCreated] = {
-    val id = UUID.randomUUID()
+  override def createContent(x: CreateContentCommand): Future[ContentCreated] = {
+    val id = x.entity.id
     entity(id.toString) ? ContentEntity.EntityCreateContent(id, x)
   }
 
-  override def getContent(x: GetContent): Future[Content] =
+  override def getContent(x: GetContentCommand): Future[Content] =
     entity(x.id.toString) ? ContentEntity.EntityGetContent(x)
 
   override def getState(id: String): Future[ContentState] =
     entity(id) ? ContentEntity.EntityGetState(UUID.fromString(id))
 
   override def modifyState(id: String, state: ContentState): Future[ContentState] =
-    (entity(id) ? ContentEntity.EntityModifyState(state)).map(_.state)
+    Future.successful(state)
 }

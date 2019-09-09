@@ -10,28 +10,31 @@ package object data {
 
 
   sealed trait ContentCommand
-  case class CreateContent(data: String) extends ContentCommand
-  case class GetContent(id: UUID) extends ContentCommand
+  case class CreateContentCommand(entity: Content) extends ContentCommand
+  case class GetContentCommand(id: UUID) extends ContentCommand
   case class GetContentEntityState(id: String) extends ContentCommand with DbAccessor
 
   sealed trait ContentEvent
   case class ContentCreated(entity: Content) extends ContentEvent
-  case class ContentCompensatingActionPerformed(state: ContentState) extends ContentEvent
-  case class ContentState(entity: Option[Content])
+  case class ContentState(entity: Option[Content], timeStamp: String)
   case class Content(id: UUID, data: String)
 
+  case class NotificationSent(json: Seq[String]) extends ContentEvent
+
   object Implicits extends AvroByteStreams{
-    implicit val createContentRW = Typebus.declareType[CreateContent, AvroByteStreamReader[CreateContent], AvroByteStreamWriter[CreateContent]]
-    implicit val ContentCreatedRW = Typebus.declareType[ContentCreated, AvroByteStreamReader[ContentCreated], AvroByteStreamWriter[ContentCreated]]
+    implicit val createContentRW = Typebus.declareType[CreateContentCommand, AvroByteStreamReader[CreateContentCommand], AvroByteStreamWriter[CreateContentCommand]]
     implicit val ContentRW = Typebus.declareType[Content, AvroByteStreamReader[Content], AvroByteStreamWriter[Content]]
-    implicit val getContentRW = Typebus.declareType[GetContent, AvroByteStreamReader[GetContent], AvroByteStreamWriter[GetContent]]
-    implicit val getContentEntityStateRW = Typebus.declareType[GetContentEntityState, AvroByteStreamReader[GetContentEntityState], AvroByteStreamWriter[GetContentEntityState]]
+    implicit val getContentRW = Typebus.declareType[GetContentCommand, AvroByteStreamReader[GetContentCommand], AvroByteStreamWriter[GetContentCommand]]
+
+    implicit val notificationSentRW = Typebus.declareType[NotificationSent, AvroByteStreamReader[NotificationSent], AvroByteStreamWriter[NotificationSent]]
+
     implicit val ContentStateRW = Typebus.declareType[ContentState, AvroByteStreamReader[ContentState], AvroByteStreamWriter[ContentState]]
+    implicit val GetContentEntityStateRW = Typebus.declareType[GetContentEntityState, AvroByteStreamReader[GetContentEntityState], AvroByteStreamWriter[GetContentEntityState]]
   }
 
   trait ContentDatabase extends EntityDb[ContentState]{
-    def createContent(x: CreateContent): Future[ContentCreated]
-    def getContent(x: GetContent): Future[Content]
+    def createContent(x: CreateContentCommand): Future[ContentCreated]
+    def getContent(x: GetContentCommand): Future[Content]
   }
 }
 

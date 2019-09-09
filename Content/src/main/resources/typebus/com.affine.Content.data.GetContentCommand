@@ -1,0 +1,25 @@
+{
+  "symbol" : {
+    "Symbol" : "CaseClass"
+  },
+  "type" : "com.affine.Content.data.GetContentCommand",
+  "members" : {
+    "com.affine.Content.data.GetContentCommand.id" : {
+      "term" : {
+        "_type" : "io.surfkit.typebus.Typebus.Leaf",
+        "type" : "java.util.UUID"
+      },
+      "pos" : 0,
+      "hasDefault" : false
+    }
+  },
+  "baseClasses" : [ {
+    "symbol" : {
+      "Symbol" : "Trait"
+    },
+    "members" : { },
+    "_type" : "io.surfkit.typebus.Typebus.Node",
+    "baseClasses" : [ ],
+    "type" : "com.affine.Content.data.ContentCommand"
+  } ]
+}

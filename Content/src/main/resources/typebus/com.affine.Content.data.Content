@@ -1,0 +1,25 @@
+{
+  "symbol" : {
+    "Symbol" : "CaseClass"
+  },
+  "type" : "com.affine.Content.data.Content",
+  "members" : {
+    "com.affine.Content.data.Content.id" : {
+      "term" : {
+        "_type" : "io.surfkit.typebus.Typebus.Leaf",
+        "type" : "java.util.UUID"
+      },
+      "pos" : 0,
+      "hasDefault" : false
+    },
+    "com.affine.Content.data.Content.data" : {
+      "term" : {
+        "_type" : "io.surfkit.typebus.Typebus.Leaf",
+        "type" : "java.lang.String"
+      },
+      "pos" : 1,
+      "hasDefault" : false
+    }
+  },
+  "baseClasses" : [ ]
+}
